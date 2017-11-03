@@ -8,73 +8,79 @@ use std::fs::{File};
 use std::sync::{Arc, Mutex};
 
 fn main() {
+    let mut config_file = File::open("tsrlog_config.yaml").unwrap();
+
+    let mut contents = String::new();
+    config_file.read_to_string(&mut contents).unwrap();
+    let configs = parse_config(contents);
+
     let command_line_args: Vec<String> = env::args().collect();
+    let arg: &str = command_line_args
+        .get(1)
+        .map(|s| s.as_ref())
+        .expect("Missing command line arg");
 
-    match command_line_args.get(1).map(|s| s.as_ref()) {
-        Some("production") =>  { run_on(Env::Production); },
-        Some("p") =>           { run_on(Env::Production); },
-        Some("staging") =>     { run_on(Env::Staging); },
-        Some("s") =>           { run_on(Env::Staging); },
-        Some("development") => { run_on(Env::Development); },
-        Some("dev") =>         { run_on(Env::Development); },
-        Some("d") =>           { run_on(Env::Development); },
-        _ => {
-            eprintln!("Unknown env");
-            exit(1);
-        }
-    }
+    let config = configs.iter().find(|config| {
+        config.alias == arg
+    }).expect("No matching config found");
+
+    println!("Capturing logs from {}", config.heroku_app_name);
+
+    run_with(config);
 }
 
-enum Env {
-    Production,
-    Staging,
-    Development,
+fn parse_config(contents: String) -> Vec<Env> {
+    let mut acc = Vec::new();
+
+    contents
+        .lines()
+        .filter(|line| line.len() > 0)
+        .for_each(|line| {
+            let split: Vec<&str> = line.split(": ").collect();
+            let alias = split.get(0).unwrap();
+            let heroku_app_name = split.get(1).unwrap();
+            let env = Env {
+                heroku_app_name: heroku_app_name.to_string(),
+                alias: alias.to_string(),
+            };
+            acc.push(env);
+        });
+
+    acc
 }
 
-impl Env {
-    fn heroku_app_name(&self) -> &'static str {
-        match self {
-            &Env::Production => "tonsser-api-production",
-            &Env::Staging => "tonsser-api-staging",
-            &Env::Development => "tonsser-api-development",
-        }
-    }
-
-    fn name(&self) -> &'static str {
-        match self {
-            &Env::Production => "production",
-            &Env::Staging => "staging",
-            &Env::Development => "dev",
-        }
-    }
+#[derive(Debug)]
+struct Env {
+    heroku_app_name: String,
+    alias: String,
 }
 
 type Logs = Arc<Mutex<String>>;
 
-fn run_on(env: Env) {
+fn run_with(env: &Env) {
     let logs = Arc::new(Mutex::new(String::new()));
     let env = Arc::new(env);
 
     {
+        let app_name: String = env.heroku_app_name.clone();
         let logs = Arc::clone(&logs);
-        let env = Arc::clone(&env);
         thread::spawn(move || {
-            let child = spawn_tail_logs_command(env.heroku_app_name());
+            let child = spawn_tail_logs_command(app_name);
             for s in stream_for_child_process(child) {
                 logs.lock().unwrap().push_str(&s);
             }
         });
     }
 
-    run_input_loop(&logs, &env);
+    run_input_loop(&logs);
 }
 
-fn run_input_loop(logs: &Logs, env: &Env) {
+fn run_input_loop(logs: &Logs) {
     let stdin = io::stdin();
     let mut input = stdin.lock().lines();
     let mut seen_lines: HashSet<String> = HashSet::new();
     loop {
-        print!("tsrlog {} > ", env.name());
+        print!("> ");
         stdout().flush().expect("failed to flush stdout");
         let input: String = input.next().unwrap().unwrap();
         let action = Action::parse(&input);
@@ -168,9 +174,9 @@ impl Iterator for ChildStream {
     }
 }
 
-fn spawn_tail_logs_command(heroku_app: &'static str) -> Child {
+fn spawn_tail_logs_command(heroku_app: String) -> Child {
     Command::new("heroku")
-        .args(["logs", "-t", "-a", heroku_app.clone()].iter())
+        .args(["logs", "-t", "-a", heroku_app.as_ref()].iter())
         .stdout(Stdio::piped())
         .spawn()
         .expect("failed to spawn thread")
