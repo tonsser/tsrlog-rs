@@ -15,7 +15,7 @@ Running the program will start tailing the logs in the background and open a pro
 The supported commands are:
 
 - `exit`: Stop the program.
-- `f`, `fail`: Print lines that match `Completed [^2]`. Used to find failed requests.
+- `f`, `fail`: Print lines that match `Completed [^2]`. Used to find failed requests. Subsequent runs of the command will ignore lines previously printed. So if you see no output, then there are no new failed requests.
 - `save`, `s`, `write`, `w`: Write the logs to a file named `logs`.
 - Any other input: Search the logs for the input (ignoring case) and print matching lines.
 
