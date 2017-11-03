@@ -4,7 +4,7 @@ use std::env;
 use std::process::exit;
 use std::collections::HashSet;
 use std::thread;
-use std::fs::{File};
+use std::fs::File;
 use std::sync::{Arc, Mutex};
 
 fn main() {
@@ -15,14 +15,13 @@ fn main() {
     let configs = parse_config(contents);
 
     let command_line_args: Vec<String> = env::args().collect();
-    let arg: &str = command_line_args
-        .get(1)
-        .map(|s| s.as_ref())
-        .expect("Missing command line arg");
+    let arg: &str = command_line_args.get(1).map(|s| s.as_ref()).expect(
+        "Missing command line arg",
+    );
 
-    let config = configs.iter().find(|config| {
-        config.alias == arg
-    }).expect("No matching config found");
+    let config = configs.iter().find(|config| config.alias == arg).expect(
+        "No matching config found",
+    );
 
     println!("Capturing logs from {}", config.heroku_app_name);
 
@@ -32,10 +31,8 @@ fn main() {
 fn parse_config(contents: String) -> Vec<Env> {
     let mut acc = Vec::new();
 
-    contents
-        .lines()
-        .filter(|line| line.len() > 0)
-        .for_each(|line| {
+    contents.lines().filter(|line| line.len() > 0).for_each(
+        |line| {
             let split: Vec<&str> = line.split(": ").collect();
             let alias = split.get(0).unwrap();
             let heroku_app_name = split.get(1).unwrap();
@@ -44,7 +41,8 @@ fn parse_config(contents: String) -> Vec<Env> {
                 alias: alias.to_string(),
             };
             acc.push(env);
-        });
+        },
+    );
 
     acc
 }
@@ -86,15 +84,14 @@ fn run_input_loop(logs: &Logs) {
         let action = Action::parse(&input);
 
         match action {
-            Action::Skip => {},
+            Action::Skip => {}
 
-            Action::Exit => { exit(0) },
+            Action::Exit => exit(0),
 
             Action::Fail => {
                 let logs = logs.lock().unwrap();
 
-                let failed_lines = logs
-                    .lines()
+                let failed_lines = logs.lines()
                     .filter(|line| line.contains("Completed "))
                     .filter(|line| !line.contains("Completed 2"));
 
@@ -106,16 +103,15 @@ fn run_input_loop(logs: &Logs) {
                 });
 
                 stdout().flush().expect("failed to flush stdout");
-            },
+            }
 
             Action::Search(query) => {
                 let logs = logs.lock().unwrap();
-                logs
-                    .lines()
+                logs.lines()
                     .filter(|line| line.to_lowercase().contains(query.as_ref() as &str))
                     .for_each(|line| println!("{}", line));
                 stdout().flush().expect("failed to flush stdout");
-            },
+            }
 
             Action::Save => {
                 let mut file = File::create("logs").unwrap();
@@ -140,23 +136,21 @@ enum Action {
 impl Action {
     fn parse(input: &String) -> Action {
         match input.as_ref() {
-            "" =>      Action::Skip,
-            "fail" =>  Action::Fail,
-            "f" =>     Action::Fail,
-            "exit" =>  Action::Exit,
+            "" => Action::Skip,
+            "fail" => Action::Fail,
+            "f" => Action::Fail,
+            "exit" => Action::Exit,
             "write" => Action::Save,
-            "w" =>     Action::Save,
-            "save" =>  Action::Save,
-            "s" =>     Action::Save,
-            s =>       Action::Search(s.to_string()),
+            "w" => Action::Save,
+            "save" => Action::Save,
+            "s" => Action::Save,
+            s => Action::Search(s.to_string()),
         }
     }
 }
 
 fn stream_for_child_process(child: Child) -> ChildStream {
-    ChildStream {
-        child_stdout: child.stdout.expect("failed getting stdout for child"),
-    }
+    ChildStream { child_stdout: child.stdout.expect("failed getting stdout for child") }
 }
 
 struct ChildStream {
@@ -168,7 +162,9 @@ impl Iterator for ChildStream {
 
     fn next(&mut self) -> Option<String> {
         let mut buf = [0; 10];
-        self.child_stdout.read(&mut buf).expect("read child out to string");
+        self.child_stdout.read(&mut buf).expect(
+            "read child out to string",
+        );
         let s: String = String::from_utf8_lossy(&buf).into_owned();
         Some(s)
     }
