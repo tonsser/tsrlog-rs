@@ -1,4 +1,4 @@
-# tsrlogs
+# tsrlog
 
 Tool for working with streaming logs from Heroku.
 
@@ -24,7 +24,7 @@ The supported commands are:
 For the time being you have to compile it yourself, but that should be very straight forward.
 
 1. [Install Rust](https://www.rust-lang.org/en-US/install.html)
-2. Download the source: `git clone https://github.com/tonsser/tsrlogs-rs`
+2. Download the source: `git clone https://github.com/tonsser/tsrlog-rs`
 3. Compile: `cargo build --release`
 4. Make a configuration file. See chapter below 👇
 
@@ -60,5 +60,5 @@ The code doesn't support tracking history and using the arrow keys to move up an
 I recommend adding a shell alias like:
 
 ```
-alias tsrlogs='rlwrap PATH_TO_BINARY'
+alias tsrlog='rlwrap PATH_TO_BINARY'
 ```
