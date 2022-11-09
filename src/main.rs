@@ -35,10 +35,10 @@ fn parse_config(contents: String) -> Vec<Env> {
 
     contents
         .lines()
-        .filter(|line| line.len() > 0)
+        .filter(|line| !line.is_empty())
         .for_each(|line| {
             let split: Vec<&str> = line.split(": ").collect();
-            let alias = split.get(0).unwrap();
+            let alias = split.first().unwrap();
             let heroku_app_name = split.get(1).unwrap();
             let env = Env {
                 heroku_app_name: heroku_app_name.to_string(),
@@ -100,7 +100,7 @@ fn run_input_loop(logs: &Logs) {
                     .filter(|line| !line.contains("Completed 2"));
 
                 failed_lines.for_each(|line| {
-                    if !seen_lines.contains(line.as_ref() as &str) {
+                    if !seen_lines.contains(line as &str) {
                         println!("{}", line);
                     }
                     seen_lines.insert(line.to_string());
@@ -169,7 +169,7 @@ impl Iterator for ChildStream {
     fn next(&mut self) -> Option<String> {
         let mut buf = [0; 10];
         self.child_stdout
-            .read(&mut buf)
+            .read_exact(&mut buf)
             .expect("read child out to string");
         let s: String = String::from_utf8_lossy(&buf).into_owned();
         Some(s)
