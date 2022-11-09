@@ -1,11 +1,11 @@
-use std::process::{Command, ChildStdout, Child, Stdio};
-use std::io::{self, Read, BufRead, stdout, Write};
-use std::env;
-use std::process::exit;
 use std::collections::HashSet;
-use std::thread;
+use std::env;
 use std::fs::File;
+use std::io::{self, stdout, BufRead, Read, Write};
+use std::process::exit;
+use std::process::{Child, ChildStdout, Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::thread;
 
 fn main() {
     let mut config_file = File::open("tsrlog_config.yaml").unwrap();
@@ -15,13 +15,15 @@ fn main() {
     let configs = parse_config(contents);
 
     let command_line_args: Vec<String> = env::args().collect();
-    let arg: &str = command_line_args.get(1).map(|s| s.as_ref()).expect(
-        "Missing command line arg",
-    );
+    let arg: &str = command_line_args
+        .get(1)
+        .map(|s| s.as_ref())
+        .expect("Missing command line arg");
 
-    let config = configs.iter().find(|config| config.alias == arg).expect(
-        "No matching config found",
-    );
+    let config = configs
+        .iter()
+        .find(|config| config.alias == arg)
+        .expect("No matching config found");
 
     println!("Capturing logs from {}", config.heroku_app_name);
 
@@ -31,8 +33,10 @@ fn main() {
 fn parse_config(contents: String) -> Vec<Env> {
     let mut acc = Vec::new();
 
-    contents.lines().filter(|line| line.len() > 0).for_each(
-        |line| {
+    contents
+        .lines()
+        .filter(|line| line.len() > 0)
+        .for_each(|line| {
             let split: Vec<&str> = line.split(": ").collect();
             let alias = split.get(0).unwrap();
             let heroku_app_name = split.get(1).unwrap();
@@ -41,8 +45,7 @@ fn parse_config(contents: String) -> Vec<Env> {
                 alias: alias.to_string(),
             };
             acc.push(env);
-        },
-    );
+        });
 
     acc
 }
@@ -91,7 +94,8 @@ fn run_input_loop(logs: &Logs) {
             Action::Fail => {
                 let logs = logs.lock().unwrap();
 
-                let failed_lines = logs.lines()
+                let failed_lines = logs
+                    .lines()
                     .filter(|line| line.contains("Completed "))
                     .filter(|line| !line.contains("Completed 2"));
 
@@ -150,7 +154,9 @@ impl Action {
 }
 
 fn stream_for_child_process(child: Child) -> ChildStream {
-    ChildStream { child_stdout: child.stdout.expect("failed getting stdout for child") }
+    ChildStream {
+        child_stdout: child.stdout.expect("failed getting stdout for child"),
+    }
 }
 
 struct ChildStream {
@@ -162,9 +168,9 @@ impl Iterator for ChildStream {
 
     fn next(&mut self) -> Option<String> {
         let mut buf = [0; 10];
-        self.child_stdout.read(&mut buf).expect(
-            "read child out to string",
-        );
+        self.child_stdout
+            .read(&mut buf)
+            .expect("read child out to string");
         let s: String = String::from_utf8_lossy(&buf).into_owned();
         Some(s)
     }
